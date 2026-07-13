@@ -296,7 +296,7 @@ const PFPOverlayGenerator = () => {
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  transformOrigin: 'top left',
+                  transformOrigin: position.flipX ? 'top right' : 'top left',
                   zIndex: 5,
                   touchAction: 'none',
                   userSelect: 'none',
