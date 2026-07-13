@@ -7,16 +7,34 @@ interface PFPPosition {
   x: number;
   y: number;
   scale: number;
+  rotation: number;
+  flipX: boolean;
 }
 
 const PFPOverlayGenerator = () => {
   const [pfpImage, setPfpImage] = useState<string | null>(null);
-  const [position, setPosition] = useState<PFPPosition>({ x: 0, y: 0, scale: 1 });
+  const [position, setPosition] = useState<PFPPosition>({ x: 0, y: 0, scale: 1, rotation: 0, flipX: false });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [memeUrl, setMemeUrl] = useState<string>('');
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const positionRef = useRef(position);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gestureStart = useRef<{
+    distance: number;
+    angle: number;
+    center: { x: number; y: number };
+    positionX: number;
+    positionY: number;
+    scale: number;
+    rotation: number;
+  } | null>(null);
+
+  // Keep a ref to the latest position so multi-pointer gestures can read it reliably.
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
 
   // Handle image upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,49 +43,118 @@ const PFPOverlayGenerator = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setPfpImage(e.target?.result as string);
-        setPosition({ x: 0, y: 0, scale: 1 });
+        setPosition({ x: 0, y: 0, scale: 1, rotation: 0, flipX: false });
         setMemeUrl('');
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const getDistance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.hypot(a.x - b.x, a.y - b.y);
+
+  const getAngle = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.atan2(b.y - a.y, b.x - a.x) * (180 / Math.PI);
+
+  const getCenter = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  });
+
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), max);
+
   // Handle drag start for both mouse and touch via pointer events
   const handlePointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
     e.preventDefault();
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    const newPoint = { x: e.clientX, y: e.clientY };
+    pointers.current.set(e.pointerId, newPoint);
+
     if (e.currentTarget.setPointerCapture) {
       e.currentTarget.setPointerCapture(e.pointerId);
     }
+
+    if (pointers.current.size === 1) {
+      setIsDragging(true);
+      setDragStart(newPoint);
+      gestureStart.current = null;
+    } else if (pointers.current.size === 2) {
+      setIsDragging(false);
+      const [p1, p2] = Array.from(pointers.current.values());
+      const distance = getDistance(p1, p2);
+      const angle = getAngle(p1, p2);
+      const center = getCenter(p1, p2);
+      const currentPosition = positionRef.current;
+
+      gestureStart.current = {
+        distance,
+        angle,
+        center,
+        positionX: currentPosition.x,
+        positionY: currentPosition.y,
+        scale: currentPosition.scale,
+        rotation: currentPosition.rotation,
+      };
+    }
   };
 
-  // Handle pointer move while dragging
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isDragging || !containerRef.current) return;
+      if (!pointers.current.has(e.pointerId)) return;
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
+      if (pointers.current.size === 1 && isDragging) {
+        const deltaX = e.clientX - dragStart.x;
+        const deltaY = e.clientY - dragStart.y;
 
-      setPosition((prev) => ({
-        ...prev,
-        x: prev.x + deltaX,
-        y: prev.y + deltaY,
-      }));
+        setPosition((prev) => ({
+          ...prev,
+          x: prev.x + deltaX,
+          y: prev.y + deltaY,
+        }));
 
-      setDragStart({ x: e.clientX, y: e.clientY });
+        setDragStart({ x: e.clientX, y: e.clientY });
+      } else if (pointers.current.size === 2 && gestureStart.current) {
+        const [p1, p2] = Array.from(pointers.current.values());
+        const distance = getDistance(p1, p2);
+        const angle = getAngle(p1, p2);
+        const center = getCenter(p1, p2);
+        const scaleFactor = distance / gestureStart.current.distance;
+        const newScale = clamp(gestureStart.current.scale * scaleFactor, 0.5, 3);
+        const newRotation =
+          gestureStart.current.rotation + (angle - gestureStart.current.angle);
+        const deltaCenter = {
+          x: center.x - gestureStart.current.center.x,
+          y: center.y - gestureStart.current.center.y,
+        };
+
+        setPosition((prev) => ({
+          ...prev,
+          x: gestureStart.current!.positionX + deltaCenter.x,
+          y: gestureStart.current!.positionY + deltaCenter.y,
+          scale: newScale,
+          rotation: newRotation,
+        }));
+      }
     };
 
-    const handlePointerUp = () => {
-      setIsDragging(false);
+    const handlePointerUp = (e: PointerEvent) => {
+      pointers.current.delete(e.pointerId);
+
+      if (pointers.current.size === 0) {
+        setIsDragging(false);
+        gestureStart.current = null;
+      } else if (pointers.current.size === 1) {
+        const remaining = pointers.current.values().next().value;
+        setIsDragging(true);
+        setDragStart({ x: remaining.x, y: remaining.y });
+        gestureStart.current = null;
+      }
     };
 
-    if (isDragging) {
-      document.addEventListener('pointermove', handlePointerMove);
-      document.addEventListener('pointerup', handlePointerUp);
-      document.addEventListener('pointercancel', handlePointerUp);
-    }
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointercancel', handlePointerUp);
 
     return () => {
       document.removeEventListener('pointermove', handlePointerMove);
@@ -129,7 +216,7 @@ const PFPOverlayGenerator = () => {
         HOODIE generator
       </h1>
       <p className="text-center mb-8 text-sm sm:text-base" style={{ color: '#27AE60' }}>
-        Upload your photo and position it under the overlay
+        Upload your pic + position it in the hoodie
       </p>
 
       {/* Buy HOODIE Button */}
@@ -197,14 +284,16 @@ const PFPOverlayGenerator = () => {
                 alt="Your PFP"
                 className="absolute"
                 style={{
-                  left: `${position.x}px`,
-                  top: `${position.y}px`,
-                  transform: `scale(${position.scale})`,
+                  left: 0,
+                  top: 0,
+                  transform: `translate(${position.x}px, ${position.y}px) rotate(${position.rotation}deg) scale(${position.flipX ? -position.scale : position.scale}, ${position.scale})`,
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
                   transformOrigin: 'top left',
                   zIndex: 5,
+                  touchAction: 'none',
+                  userSelect: 'none',
                 }}
                 draggable={false}
                 onPointerDown={handlePointerDown}
@@ -216,9 +305,14 @@ const PFPOverlayGenerator = () => {
 
         {/* Instructions */}
         {pfpImage && (
-          <p className="text-center text-sm mt-3" style={{ color: '#27AE60' }}>
-            Drag to move • Use + and - buttons to scale
-          </p>
+          <div className="text-center mt-3">
+            <p className="text-sm text-[#27AE60]">
+              Drag to move • Pinch to zoom and rotate
+            </p>
+            <p className="text-xs text-[#27AE60] mt-1">
+              Two-finger rotate on mobile
+            </p>
+          </div>
         )}
       </div>
 
@@ -238,6 +332,13 @@ const PFPOverlayGenerator = () => {
             style={{ backgroundColor: '#27AE60' }}
           >
             - Zoom
+          </button>
+          <button
+            onClick={() => setPosition((prev) => ({ ...prev, flipX: !prev.flipX }))}
+            className="px-6 py-2 text-white font-semibold rounded-lg hover:opacity-80 transition"
+            style={{ backgroundColor: '#444444' }}
+          >
+            ↔️ Flip
           </button>
           <button
             onClick={resetPosition}
