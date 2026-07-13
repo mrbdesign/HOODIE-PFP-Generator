@@ -203,29 +203,76 @@ const PFPOverlayGenerator = () => {
 
   const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // Download meme
-  const downloadMeme = () => {
-    if (!memeUrl) return;
+  const dataUrlToBlob = (dataUrl: string) => {
+    const [header, base64] = dataUrl.split(',');
+    const contentType = header.match(/:(.*?);/)?.[1] || 'image/png';
+    const binary = atob(base64);
+    const array = new Uint8Array(binary.length);
 
-    const link = document.createElement('a');
-    link.href = memeUrl;
-    link.download = 'hoodie-meme.png';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    if (isMobile) {
-      window.open(memeUrl, '_blank');
+    for (let i = 0; i < binary.length; i += 1) {
+      array[i] = binary.charCodeAt(i);
     }
+
+    return new Blob([array], { type: contentType });
   };
 
-  // Copy to clipboard
+  // Download meme
+  const downloadMeme = async () => {
+    if (!memeUrl) return;
+
+    const blob = dataUrlToBlob(memeUrl);
+
+    if (navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], 'hoodie-meme.png', { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'HOODIE meme',
+            text: 'Save or share this generated image',
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn('Web Share failed, falling back to download:', error);
+      }
+    }
+
+    if (!isMobile) {
+      const link = document.createElement('a');
+      link.href = memeUrl;
+      link.download = 'hoodie-meme.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    window.open(objectUrl, '_blank');
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+  };
+
+  // Copy/share to clipboard
   const copyToClipboard = async () => {
     if (!memeUrl) return;
+
+    if (isMobile && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'HOODIE meme',
+          text: 'Here is my generated HOODIE meme',
+          url: memeUrl,
+        });
+        return;
+      } catch (shareError) {
+        console.warn('Mobile share fallback failed:', shareError);
+      }
+    }
+
     try {
       if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-        const blob = await fetch(memeUrl).then((res) => res.blob());
+        const blob = dataUrlToBlob(memeUrl);
         await navigator.clipboard.write([
           new ClipboardItem({ 'image/png': blob }),
         ]);
@@ -233,17 +280,29 @@ const PFPOverlayGenerator = () => {
         return;
       }
 
-      await navigator.clipboard.writeText(memeUrl);
-      alert('Meme URL copied to clipboard!');
-    } catch (error) {
-      console.error('Error copying to clipboard:', error);
-      try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(memeUrl);
         alert('Meme URL copied to clipboard!');
-      } catch (fallbackError) {
-        console.error('Fallback copy failed:', fallbackError);
-        alert('Copy failed — on mobile, use the browser menu to save the image.');
+        return;
       }
+    } catch (error) {
+      console.error('Clipboard copy failed:', error);
+    }
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = memeUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      alert('Meme URL copied to clipboard!');
+    } catch (fallbackError) {
+      console.error('Fallback text copy failed:', fallbackError);
+      alert('Copy failed — please use the browser share feature.');
     }
   };
 
