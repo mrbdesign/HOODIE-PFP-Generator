@@ -263,7 +263,7 @@ const PFPOverlayGenerator = () => {
         HOODIE generator
       </h1>
       <p className="text-center text-base sm:text-lg mb-4 text-[#27AE60]">
-        the hoodie stays on.
+        the hood stays on.
       </p>
       <p className="text-center mb-8 text-sm sm:text-base" style={{ color: '#27AE60' }}>
         upload your pic + position it in the hoodie
