@@ -15,7 +15,6 @@ const PFPOverlayGenerator = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [memeUrl, setMemeUrl] = useState<string>('');
-  const [textOverlay, setTextOverlay] = useState<string>('');
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
