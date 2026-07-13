@@ -18,9 +18,6 @@ const PFPOverlayGenerator = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const CANVAS_WIDTH = 500;
-  const CANVAS_HEIGHT = 500;
-
   // Handle image upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -35,15 +32,19 @@ const PFPOverlayGenerator = () => {
     }
   };
 
-  // Handle mouse down for dragging
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Handle drag start for both mouse and touch via pointer events
+  const handlePointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
+    e.preventDefault();
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
+    if (e.currentTarget.setPointerCapture) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
   };
 
-  // Handle mouse move for dragging
+  // Handle pointer move while dragging
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (!isDragging || !containerRef.current) return;
 
       const deltaX = e.clientX - dragStart.x;
@@ -58,18 +59,20 @@ const PFPOverlayGenerator = () => {
       setDragStart({ x: e.clientX, y: e.clientY });
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       setIsDragging(false);
     };
 
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
+      document.addEventListener('pointercancel', handlePointerUp);
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointercancel', handlePointerUp);
     };
   }, [isDragging, dragStart]);
 
@@ -121,11 +124,11 @@ const PFPOverlayGenerator = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-8" style={{ backgroundColor: '#1A1A1A', borderRadius: '12px' }}>
-      <h1 className="text-4xl font-bold mb-2 text-center" style={{ color: '#CCFF00' }}>
+    <div className="w-full max-w-2xl mx-auto p-4 sm:p-8" style={{ backgroundColor: '#1A1A1A', borderRadius: '12px' }}>
+      <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-center" style={{ color: '#CCFF00' }}>
         HOODIE generator
       </h1>
-      <p className="text-center mb-8" style={{ color: '#27AE60' }}>
+      <p className="text-center mb-8 text-sm sm:text-base" style={{ color: '#27AE60' }}>
         Upload your photo and position it under the overlay
       </p>
 
@@ -135,7 +138,7 @@ const PFPOverlayGenerator = () => {
           href="https://app.uniswap.org/explore/tokens/robinhood/0xC72c01AAB5f5678dc1d6f5C6d2B417d91D402Ba3"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block px-12 py-5 text-white font-bold rounded-lg hover:opacity-80 transition text-xl"
+          className="inline-block w-full sm:w-auto px-6 sm:px-12 py-4 text-white font-bold rounded-lg hover:opacity-80 transition text-lg sm:text-xl"
           style={{ backgroundColor: '#CCFF00', color: '#000000' }}
         >
           💰 BUY $HOODIE
@@ -151,7 +154,7 @@ const PFPOverlayGenerator = () => {
           type="file"
           accept="image/*"
           onChange={handleImageUpload}
-          className="w-full px-4 py-3 border-2 rounded-lg cursor-pointer transition"
+          className="w-full px-4 py-3 border-2 rounded-lg cursor-pointer transition text-sm sm:text-base"
           style={{ borderColor: '#27AE60', backgroundColor: '#0F0F0F', color: '#27AE60' }}
         />
       </div>
@@ -160,12 +163,11 @@ const PFPOverlayGenerator = () => {
       <div className="mb-8">
         <div
           ref={containerRef}
-          className="relative mx-auto rounded-lg overflow-hidden bg-white border-2 shadow-lg"
+          className="relative mx-auto rounded-lg overflow-hidden bg-white border-2 shadow-lg aspect-square w-full max-w-[500px]"
           style={{
-            width: `${CANVAS_WIDTH}px`,
-            height: `${CANVAS_HEIGHT}px`,
             cursor: pfpImage ? (isDragging ? 'grabbing' : 'grab') : 'default',
             borderColor: '#27AE60',
+            touchAction: 'none',
           }}
         >
           {/* Canvas for export */}
@@ -198,13 +200,14 @@ const PFPOverlayGenerator = () => {
                   left: `${position.x}px`,
                   top: `${position.y}px`,
                   transform: `scale(${position.scale})`,
-                  width: `${CANVAS_WIDTH}px`,
-                  height: `${CANVAS_HEIGHT}px`,
+                  width: '100%',
+                  height: '100%',
                   objectFit: 'cover',
                   transformOrigin: 'top left',
                   zIndex: 5,
                 }}
-                onMouseDown={handleMouseDown}
+                draggable={false}
+                onPointerDown={handlePointerDown}
               />
             )}
 
