@@ -253,59 +253,6 @@ const PFPOverlayGenerator = () => {
     setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
   };
 
-  // Copy/share to clipboard
-  const copyToClipboard = async () => {
-    if (!memeUrl) return;
-
-    if (isMobile && navigator.share) {
-      try {
-        await navigator.share({
-          title: 'HOODIE meme',
-          text: 'Here is my generated HOODIE meme',
-          url: memeUrl,
-        });
-        return;
-      } catch (shareError) {
-        console.warn('Mobile share fallback failed:', shareError);
-      }
-    }
-
-    try {
-      if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-        const blob = dataUrlToBlob(memeUrl);
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': blob }),
-        ]);
-        alert('Meme copied to clipboard!');
-        return;
-      }
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(memeUrl);
-        alert('Meme URL copied to clipboard!');
-        return;
-      }
-    } catch (error) {
-      console.error('Clipboard copy failed:', error);
-    }
-
-    try {
-      const textarea = document.createElement('textarea');
-      textarea.value = memeUrl;
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      alert('Meme URL copied to clipboard!');
-    } catch (fallbackError) {
-      console.error('Fallback text copy failed:', fallbackError);
-      alert('Copy failed — please use the browser share feature.');
-    }
-  };
-
   const resetPosition = () => {
     setPosition({ x: 0, y: 0, scale: 1, rotation: 0 });
   };
@@ -476,13 +423,6 @@ const PFPOverlayGenerator = () => {
               style={{ backgroundColor: '#27AE60' }}
             >
               📥 download image
-            </button>
-            <button
-              onClick={copyToClipboard}
-              className="px-6 py-3 text-white font-semibold rounded-lg hover:opacity-80 transition text-base"
-              style={{ backgroundColor: '#27AE60' }}
-            >
-              📋 copy
             </button>
           </div>
         </div>
