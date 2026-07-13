@@ -8,12 +8,11 @@ interface PFPPosition {
   y: number;
   scale: number;
   rotation: number;
-  flipX: boolean;
 }
 
 const PFPOverlayGenerator = () => {
   const [pfpImage, setPfpImage] = useState<string | null>(null);
-  const [position, setPosition] = useState<PFPPosition>({ x: 0, y: 0, scale: 1, rotation: 0, flipX: false });
+  const [position, setPosition] = useState<PFPPosition>({ x: 0, y: 0, scale: 1, rotation: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [memeUrl, setMemeUrl] = useState<string>('');
@@ -43,7 +42,7 @@ const PFPOverlayGenerator = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setPfpImage(e.target?.result as string);
-        setPosition({ x: 0, y: 0, scale: 1, rotation: 0, flipX: false });
+        setPosition({ x: 0, y: 0, scale: 1, rotation: 0 });
         setMemeUrl('');
       };
       reader.readAsDataURL(file);
@@ -213,14 +212,17 @@ const PFPOverlayGenerator = () => {
   };
 
   const resetPosition = () => {
-    setPosition({ x: 0, y: 0, scale: 1, rotation: 0, flipX: false });
+    setPosition({ x: 0, y: 0, scale: 1, rotation: 0 });
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-8" style={{ backgroundColor: '#1A1A1A', borderRadius: '12px' }}>
+    <div className="w-full max-w-2xl mx-auto p-4 sm:p-8 pb-0" style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', paddingBottom: 0 }}>
       <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-center" style={{ color: '#CCFF00' }}>
         HOODIE generator
       </h1>
+      <p className="text-center text-base sm:text-lg mb-4 text-[#27AE60]">
+        the hood stays on.
+      </p>
       <p className="text-center mb-8 text-sm sm:text-base" style={{ color: '#27AE60' }}>
         upload your pic + position it in the hoodie
       </p>
@@ -241,7 +243,7 @@ const PFPOverlayGenerator = () => {
       {/* Image Upload */}
       <div className="mb-8">
         <label className="block text-sm font-semibold mb-3" style={{ color: '#27AE60' }}>
-          Upload Your Photo
+          upload your photo
         </label>
         <input
           type="file"
@@ -287,16 +289,16 @@ const PFPOverlayGenerator = () => {
             {pfpImage && (
               <img
                 src={pfpImage}
-                alt="Your PFP"
+                alt="your pfp"
                 className="absolute"
                 style={{
                   left: 0,
                   top: 0,
-                  transform: `translate(${position.x}px, ${position.y}px) rotate(${position.rotation}deg) scale(${position.flipX ? -position.scale : position.scale}, ${position.scale})`,
+                  transform: `translate(${position.x}px, ${position.y}px) rotate(${position.rotation}deg) scale(${position.scale})`,
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  transformOrigin: position.flipX ? 'top right' : 'top left',
+                  transformOrigin: 'top left',
                   zIndex: 5,
                   touchAction: 'none',
                   userSelect: 'none',
@@ -313,10 +315,10 @@ const PFPOverlayGenerator = () => {
         {pfpImage && (
           <div className="text-center mt-3">
             <p className="text-sm text-[#27AE60]">
-              Drag to move • Pinch to zoom and rotate
+              drag to move • pinch to zoom and rotate
             </p>
             <p className="text-xs text-[#27AE60] mt-1">
-              Two-finger rotate on mobile
+              two-finger rotate on mobile
             </p>
           </div>
         )}
@@ -330,41 +332,34 @@ const PFPOverlayGenerator = () => {
             className="px-6 py-2 text-white font-semibold rounded-lg hover:opacity-80 transition"
             style={{ backgroundColor: '#27AE60' }}
           >
-            + Zoom
+            + zoom
           </button>
           <button
             onClick={() => handleScaleChange(-0.1)}
             className="px-6 py-2 text-white font-semibold rounded-lg hover:opacity-80 transition"
             style={{ backgroundColor: '#27AE60' }}
           >
-            - Zoom
-          </button>
-          <button
-            onClick={() => setPosition((prev) => ({ ...prev, flipX: !prev.flipX }))}
-            className="px-6 py-2 text-white font-semibold rounded-lg hover:opacity-80 transition"
-            style={{ backgroundColor: '#444444' }}
-          >
-            ↔️ Flip
+            - zoom
           </button>
           <button
             onClick={resetPosition}
             className="px-6 py-2 text-white font-semibold rounded-lg hover:opacity-80 transition"
             style={{ backgroundColor: '#444444' }}
           >
-            Reset
+            reset
           </button>
         </div>
       )}
 
       {/* Generate Button */}
       {pfpImage && (
-        <div className="mb-8 text-center">
+        <div className="text-center">
           <button
             onClick={generateMeme}
             className="px-8 py-3 text-white font-bold rounded-lg hover:opacity-80 transition text-lg"
             style={{ backgroundColor: '#27AE60' }}
           >
-            Generate Meme
+            generate meme
           </button>
         </div>
       )}
@@ -373,7 +368,7 @@ const PFPOverlayGenerator = () => {
       {memeUrl && (
         <div className="space-y-6">
           <div className="text-center">
-            <img src={memeUrl} alt="Generated Meme" className="mx-auto rounded-lg max-w-full shadow-lg" />
+            <img src={memeUrl} alt="generated meme" className="mx-auto rounded-lg max-w-full shadow-lg" />
           </div>
           <div className="flex gap-3 justify-center flex-wrap">
             <button
@@ -381,14 +376,14 @@ const PFPOverlayGenerator = () => {
               className="px-6 py-3 text-white font-semibold rounded-lg hover:opacity-80 transition text-base"
               style={{ backgroundColor: '#27AE60' }}
             >
-              📥 Download Image
+              📥 download image
             </button>
             <button
               onClick={copyToClipboard}
               className="px-6 py-3 text-white font-semibold rounded-lg hover:opacity-80 transition text-base"
               style={{ backgroundColor: '#27AE60' }}
             >
-              📋 Copy
+              📋 copy
             </button>
           </div>
         </div>
