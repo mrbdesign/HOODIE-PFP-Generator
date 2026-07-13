@@ -146,6 +146,12 @@ const PFPOverlayGenerator = () => {
         gestureStart.current = null;
       } else if (pointers.current.size === 1) {
         const remaining = pointers.current.values().next().value;
+        if (!remaining) {
+          setIsDragging(false);
+          gestureStart.current = null;
+          return;
+        }
+
         setIsDragging(true);
         setDragStart({ x: remaining.x, y: remaining.y });
         gestureStart.current = null;
@@ -207,7 +213,7 @@ const PFPOverlayGenerator = () => {
   };
 
   const resetPosition = () => {
-    setPosition({ x: 0, y: 0, scale: 1 });
+    setPosition({ x: 0, y: 0, scale: 1, rotation: 0, flipX: false });
   };
 
   return (
