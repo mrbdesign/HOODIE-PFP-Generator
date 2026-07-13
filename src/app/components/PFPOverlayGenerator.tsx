@@ -181,33 +181,69 @@ const PFPOverlayGenerator = () => {
     if (!canvasRef.current) return;
 
     try {
-      const dataUrl = await toPng(canvasRef.current, { quality: 0.95 });
+      const dataUrl = await toPng(canvasRef.current, {
+        quality: 0.95,
+        cacheBust: true,
+      });
       setMemeUrl(dataUrl);
     } catch (error) {
       console.error('Error generating meme:', error);
+      try {
+        const fallbackUrl = await toPng(canvasRef.current, {
+          quality: 0.95,
+          cacheBust: true,
+        });
+        setMemeUrl(fallbackUrl);
+      } catch (fallbackError) {
+        console.error('Fallback generation failed:', fallbackError);
+        alert('Failed to generate the image. Check the console for details.');
+      }
     }
   };
+
+  const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // Download meme
   const downloadMeme = () => {
     if (!memeUrl) return;
+
     const link = document.createElement('a');
     link.href = memeUrl;
-    link.download = 'meme.png';
+    link.download = 'hoodie-meme.png';
+    link.target = '_blank';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+
+    if (isMobile) {
+      window.open(memeUrl, '_blank');
+    }
   };
 
   // Copy to clipboard
   const copyToClipboard = async () => {
     if (!memeUrl) return;
     try {
-      const blob = await fetch(memeUrl).then((res) => res.blob());
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob }),
-      ]);
-      alert('Meme copied to clipboard!');
+      if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        const blob = await fetch(memeUrl).then((res) => res.blob());
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob }),
+        ]);
+        alert('Meme copied to clipboard!');
+        return;
+      }
+
+      await navigator.clipboard.writeText(memeUrl);
+      alert('Meme URL copied to clipboard!');
     } catch (error) {
       console.error('Error copying to clipboard:', error);
+      try {
+        await navigator.clipboard.writeText(memeUrl);
+        alert('Meme URL copied to clipboard!');
+      } catch (fallbackError) {
+        console.error('Fallback copy failed:', fallbackError);
+        alert('Copy failed — on mobile, use the browser menu to save the image.');
+      }
     }
   };
 
@@ -274,15 +310,19 @@ const PFPOverlayGenerator = () => {
             }}
           >
             {/* Overlay Image - Always visible */}
-            <div
+            <img
+              src="/images/overlay-mascot.png"
+              alt="hoodie overlay"
               className="absolute inset-0 pointer-events-none"
               style={{
-                backgroundImage: "url('/images/overlay-mascot.png')",
-                backgroundSize: 'contain',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                objectPosition: 'center',
                 zIndex: 10,
+                userSelect: 'none',
               }}
+              draggable={false}
             />
 
             {/* PFP Image - On top of overlay when uploaded */}
@@ -366,7 +406,7 @@ const PFPOverlayGenerator = () => {
 
       {/* Preview and Export */}
       {memeUrl && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-6">
           <div className="text-center">
             <img src={memeUrl} alt="generated meme" className="mx-auto rounded-lg max-w-full shadow-lg" />
           </div>
