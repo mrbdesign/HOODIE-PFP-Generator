@@ -222,7 +222,7 @@ const PFPOverlayGenerator = () => {
         HOODIE generator
       </h1>
       <p className="text-center mb-8 text-sm sm:text-base" style={{ color: '#27AE60' }}>
-        Upload your pic + position it in the hoodie
+        upload your pic + position it in the hoodie
       </p>
 
       {/* Buy HOODIE Button */}
