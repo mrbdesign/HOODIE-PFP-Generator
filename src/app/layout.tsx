@@ -20,10 +20,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           {children}
         </OnchainKitClientProvider>
         {/* Footer */}
-        <footer className="-mt-12 text-center text-sm text-gray-600">
+        <footer className="mt-3 text-center text-sm text-gray-600">
           <a href="https://www.mrbriandesign.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@mrbriandesign</a>
-          <div className="mt-2 text-xs text-gray-500">
-            tip: <a href="ethereum:0x66AB779a9802021fEC2d5635c0503c9D63D5ed58" className="text-blue-500 hover:underline">0x66AB779a9802021fEC2d5635c0503c9D63D5ed58</a>
+          <div className="mt-2 text-xs" style={{ color: '#CCFF00' }}>
+            tip: <a href="ethereum:0x66AB779a9802021fEC2d5635c0503c9D63D5ed58" className="hover:underline" style={{ color: '#CCFF00' }}>0x66AB779a9802021fEC2d5635c0503c9D63D5ed58</a>
           </div>
         </footer>
       </body>
